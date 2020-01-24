@@ -1,0 +1,55 @@
+****************************************
+*              WARSHIPS                *
+*         A game for Roona             *
+****************************************
+	ORG $2000
+
+TOPLEFT	EQU $400
+COLS	EQU 40
+ROWS	EQU 40
+
+* Change to low-res graphics mode
+
+GR	EQU $FB40
+* Set low-res graphics color
+*  A = color
+
+SETCOL	EQU $F864
+* Plot a block on Low-Res Screen
+*  A = vertical, X-pos
+*  Y = horizontal, Y-pos
+PLOT	EQU $F800
+
+* Draw a horizontal line of blocks
+*    A = row
+*    Y = leftmost horizontal coord.
+*  $2C = rightmost horizontal coord.
+HLINE	EQU $F819
+* Draw a vertical line of blocks
+*    A = column
+*    Y = top vertical coordinate
+*  $2D = bottom vertical coordinate
+VLINE	EQU $F828
+
+* Clear the entire low-res screen
+CLRSCR	EQU $F832
+* Clear the top of the low-res screen
+CLRTOP	EQU $F836
+
+* Read the low-res screen
+*  A = vertical, X-pos
+*  Y = horizontal, Y-pos
+*  A < color at (A,Y)
+SCRN	EQU $F871
+
+
+Entry	JSR GR
+	LDA #$03
+	JSR SETCOL
+	LDA #20
+	TAY
+	JSR PLOT
+Exit	RTS
+
+
+* vim: set noexpandtab tabstop=8 sts=8 sw=8 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
