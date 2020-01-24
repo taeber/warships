@@ -7,29 +7,37 @@
 TOPLEFT	EQU $400
 COLS	EQU 40
 ROWS	EQU 40
+COLWDTH	EQU 3   COLS/10
+ROWHGHT	EQU 3   ROWS/10
 
 * Change to low-res graphics mode
-
 GR	EQU $FB40
+
 * Set low-res graphics color
 *  A = color
-
 SETCOL	EQU $F864
+
 * Plot a block on Low-Res Screen
 *  A = vertical, X-pos
 *  Y = horizontal, Y-pos
+*  A < SCRAMBLED
 PLOT	EQU $F800
 
 * Draw a horizontal line of blocks
 *    A = row
 *    Y = leftmost horizontal coord.
 *  $2C = rightmost horizontal coord.
+*    A < SCRAMBLED
+*    Y < SCRAMBLED
 HLINE	EQU $F819
+HLINEND	EQU $2C
 * Draw a vertical line of blocks
-*    A = column
-*    Y = top vertical coordinate
+*    A = top vertical coordinate
+*    Y = column
 *  $2D = bottom vertical coordinate
+*    A < SCRAMBLED
 VLINE	EQU $F828
+VLINEND	EQU $2D
 
 * Clear the entire low-res screen
 CLRSCR	EQU $F832
@@ -43,12 +51,55 @@ CLRTOP	EQU $F836
 SCRN	EQU $F871
 
 
+****************************************
 Entry	JSR GR
+	JSR CLRTOP
 	LDA #$03
 	JSR SETCOL
-	LDA #20
+	LDA #COLS-1
+	STA HLINEND
+	LDA #ROWS-1
+	STA VLINEND
+	JMP cols
+
+Border	LDA #ROWS-1
+	STA HLINEND
+	LDA #0
 	TAY
-	JSR PLOT
+	JSR HLINE
+bottom	LDA #ROWS-1
+	LDY #0
+	JSR HLINE
+left	LDA #COLS-1
+	STA VLINEND
+	LDY #0
+	TYA
+	JSR VLINE
+right	LDY #COLS-1
+	LDA #0
+	JSR VLINE
+cols	LDX #COLWDTH
+cols1	CPX VLINEND
+	BCS rows
+	TXA
+	TAY
+	LDA #0
+	JSR VLINE
+	TXA
+	ADC #COLWDTH
+	TAX
+	JMP cols1
+rows	LDX #ROWHGHT
+rows1	CPX HLINEND
+	BCS Exit
+	TXA
+	LDY #0
+	JSR HLINE
+	TXA
+	ADC #ROWHGHT
+	TAX
+	JMP rows1
+
 Exit	RTS
 
 
