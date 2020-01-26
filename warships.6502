@@ -7,8 +7,15 @@
 TOPLEFT	EQU $400
 COLS	EQU 40
 ROWS	EQU 40
-COLWDTH	EQU 3   COLS/10
-ROWHGHT	EQU 3   ROWS/10
+
+MAXX	EQU 30
+MAXY	EQU 30
+CELLWDT	EQU 3
+CELLHGT	EQU 3
+
+PRBYTE	EQU $FDDA
+COUT	EQU $FDED
+CROUT	EQU $FD8E
 
 * Change to low-res graphics mode
 GR	EQU $FB40
@@ -52,55 +59,60 @@ SCRN	EQU $F871
 
 
 ****************************************
+*	JMP Init
 Entry	JSR GR
 	JSR CLRTOP
 	LDA #$03
 	JSR SETCOL
-	LDA #COLS-1
-	STA HLINEND
-	LDA #ROWS-1
+	LDA #MAXY
 	STA VLINEND
-	JMP cols
+	LDA #MAXX
+	STA HLINEND
+	JSR Grid
+Exit	RTS
 
-Border	LDA #ROWS-1
-	STA HLINEND
-	LDA #0
-	TAY
-	JSR HLINE
-bottom	LDA #ROWS-1
-	LDY #0
-	JSR HLINE
-left	LDA #COLS-1
-	STA VLINEND
-	LDY #0
-	TYA
-	JSR VLINE
-right	LDY #COLS-1
-	LDA #0
-	JSR VLINE
-cols	LDX #COLWDTH
-cols1	CPX VLINEND
+Init	CLC
+	JSR CROUT
+	LDX #0
+Loop	CPX #MAXX+1
+	BCS DOS
+	TXA
+	JSR PRBYTE
+	JSR CROUT
+	CLC
+	TXA
+	ADC #CELLWDT
+	TAX
+	JMP Loop
+
+DOS	JMP $3D0
+
+* DrawGrid
+Grid	NOP
+cols	LDX #0
+cols1	CPX #MAXX+1
 	BCS rows
 	TXA
 	TAY
 	LDA #0
 	JSR VLINE
+	CLC
 	TXA
-	ADC #COLWDTH
+	ADC #CELLWDT
 	TAX
 	JMP cols1
-rows	LDX #ROWHGHT
-rows1	CPX HLINEND
-	BCS Exit
+rows	LDX #0        FOR I  = 0
+rows1	CPX #MAXY+1       I <= 30
+	BCS GridZ
 	TXA
 	LDY #0
 	JSR HLINE
+	CLC
 	TXA
-	ADC #ROWHGHT
+	ADC #CELLHGT      I += 3
 	TAX
 	JMP rows1
-
-Exit	RTS
+GridZ	RTS
 
 
 * vim: set noexpandtab tabstop=8 sts=8 sw=8 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
