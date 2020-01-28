@@ -4,115 +4,106 @@
 ****************************************
 	ORG $2000
 
-TOPLEFT	EQU $400
-COLS	EQU 40
-ROWS	EQU 40
-
-MAXX	EQU 30
-MAXY	EQU 30
-CELLWDT	EQU 3
-CELLHGT	EQU 3
-
+HOME	EQU $FC58
 PRBYTE	EQU $FDDA
 COUT	EQU $FDED
 CROUT	EQU $FD8E
+TEXT	EQU $FB2F
+RDKEY	EQU $FD0C
+VTAB	EQU $FC22
 
-* Change to low-res graphics mode
-GR	EQU $FB40
+CH	EQU $24
+CV	EQU $25
 
-* Set low-res graphics color
-*  A = color
-SETCOL	EQU $F864
-
-* Plot a block on Low-Res Screen
-*  A = vertical, X-pos
-*  Y = horizontal, Y-pos
-*  A < SCRAMBLED
-PLOT	EQU $F800
-
-* Draw a horizontal line of blocks
-*    A = row
-*    Y = leftmost horizontal coord.
-*  $2C = rightmost horizontal coord.
-*    A < SCRAMBLED
-*    Y < SCRAMBLED
-HLINE	EQU $F819
-HLINEND	EQU $2C
-* Draw a vertical line of blocks
-*    A = top vertical coordinate
-*    Y = column
-*  $2D = bottom vertical coordinate
-*    A < SCRAMBLED
-VLINE	EQU $F828
-VLINEND	EQU $2D
-
-* Clear the entire low-res screen
-CLRSCR	EQU $F832
-* Clear the top of the low-res screen
-CLRTOP	EQU $F836
-
-* Read the low-res screen
-*  A = vertical, X-pos
-*  Y = horizontal, Y-pos
-*  A < color at (A,Y)
-SCRN	EQU $F871
-
+TOPLEFT	EQU $400
 
 ****************************************
-*	JMP Init
-Entry	JSR GR
-	JSR CLRTOP
-	LDA #$03
-	JSR SETCOL
-	LDA #MAXY
-	STA VLINEND
-	LDA #MAXX
-	STA HLINEND
-	JSR Grid
-Exit	RTS
 
-Init	CLC
-	JSR CROUT
+Entry	JSR TEXT
+	JSR HOME
+	JSR PrCols
 	LDX #0
-Loop	CPX #MAXX+1
-	BCS DOS
-	TXA
-	JSR PRBYTE
-	JSR CROUT
-	CLC
-	TXA
-	ADC #CELLWDT
-	TAX
-	JMP Loop
+	LDY #0
+	JSR MvCursor
+GameLoop	JSR Input
+	JMP GameLoop
 
+* PrCols prints the column names.
+PrCols	LDX #0
+PrCols1	LDA PrColsD,X
+	BEQ PrCols2
+	STA TOPLEFT,X
+	INX
+	JMP PrCols1
+PrColsD	ASC " 12345678910"
+	HEX 00
+PrCols2	NOP
+
+* PrRows prints the row names.
+PrRows	LDX #0
+PrRows1	LDA PrRowsD,X
+	BEQ PrRows2,X
+	JSR COUT
+	JSR CROUT
+	INX
+	JMP PrRows1
+PrRowsD	ASC " ABCDEFGHIJ"
+	HEX 00
+PrRows2	RTS
+
+* MvCurosr moves the cursor to (X,Y)
+MvCursor	STX CH
+	STY CV
+	INC CH
+	INC CV
+	JSR VTAB
+
+Input	JSR RDKEY
+	CMP #$9B
+	BEQ DOS     ESC QUITS
+	CMP #$88    LEFT ARROW
+	BEQ Left
+	CMP #$95    RIGHT ARROW
+	BEQ Right
+	CMP #$8A    DOWN ARROW
+	BEQ Down
+	CMP #$8B    UP ARROW
+	BEQ Up
+*	JSR PRBYTE
+	RTS
+
+Left	DEC CH
+	LDA CH
+	BNE Left1
+	INC CH      HIT LEFT EDGE
+Left1	RTS
+
+Right	INC CH
+	LDA CH
+	CMP #11
+	BNE Right1
+	DEC CH      HIT RIGHT EDGE
+Right1	RTS
+
+Up	DEC CV
+	LDA CV
+	BEQ Up1
+	JSR VTAB
+	RTS
+Up1	INC CV
+	RTS
+
+Down	INC CV
+	LDA CV
+	CMP #11
+	BEQ Down1
+	JSR VTAB
+	RTS
+Down1	DEC CV
+	RTS
+
+*Exit	RTS
 DOS	JMP $3D0
 
-* DrawGrid
-Grid	NOP
-cols	LDX #0
-cols1	CPX #MAXX+1
-	BCS rows
-	TXA
-	TAY
-	LDA #0
-	JSR VLINE
-	CLC
-	TXA
-	ADC #CELLWDT
-	TAX
-	JMP cols1
-rows	LDX #0        FOR I  = 0
-rows1	CPX #MAXY+1       I <= 30
-	BCS GridZ
-	TXA
-	LDY #0
-	JSR HLINE
-	CLC
-	TXA
-	ADC #CELLHGT      I += 3
-	TAX
-	JMP rows1
-GridZ	RTS
 
-
-* vim: set noexpandtab tabstop=8 sts=8 sw=8 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
+* vim: set noexpandtab tabstop=9 sts=9 sw=9 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
