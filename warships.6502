@@ -4,22 +4,23 @@
 ****************************************
 	ORG $2000
 
+INIT	EQU $FB2F   AKA TEXT
 HOME	EQU $FC58
 PRBYTE	EQU $FDDA
 COUT	EQU $FDED
 CROUT	EQU $FD8E
-TEXT	EQU $FB2F
-RDKEY	EQU $FD0C
+RDKEY2	EQU $FD0C
 VTAB	EQU $FC22
 
 CH	EQU $24
 CV	EQU $25
 
 TOPLEFT	EQU $400
+PTR	EQU $06
 
 ****************************************
 
-Entry	JSR TEXT
+Entry	JSR INIT
 	JSR HOME
 	JSR PrCols
 	LDX #0
@@ -54,6 +55,12 @@ PrRowsD	ASC " ABCDEFGHIJ"
 	HEX 00
 PrRows2	RTS
 
+Quit	JSR HOME
+	JSR Print
+	ASC "Thank you for playing!"
+	HEX 8D00
+	JMP $3D0       RE-ENTER DOS
+
 * MvCurosr moves the cursor to (X,Y)
 MvCursor	STX CH
 	STY CV
@@ -61,7 +68,7 @@ MvCursor	STX CH
 	INC CV
 	JSR VTAB
 
-Input	JSR RDKEY
+Input	JSR RDKEY2
 	CMP #$9B
 	BEQ Quit    ESC QUITS
 	CMP #$88    LEFT ARROW
@@ -122,11 +129,28 @@ Down	INC CV
 Down1	DEC CV
 	RTS
 
-Quit	JSR HOME
-*	JSR Print
-*	ASC "Thank you for playing!"
-*	HEX 00
-	JMP $3D0       RE-ENTER DOS
+* Prints an ASCII string.
+* From Wagner's "Assembly Lines" pg 125
+Print	PLA
+	STA PTR
+	PLA
+	STA PTR+1
+	LDY #$01
+Print1	LDA (PTR),Y
+	BEQ Print2
+	JSR COUT
+	INY
+	BNE Print1
+Print2	CLC
+	TYA
+	ADC PTR
+	STA PTR
+	LDA PTR+1
+	ADC #$00
+	PHA
+	LDA PTR
+	PHA
+	RTS
 
 Ships	HEX 01010500   X,Y,LEN,SUNK
 	HEX 02010400
