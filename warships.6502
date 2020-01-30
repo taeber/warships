@@ -15,8 +15,11 @@ VTAB	EQU $FC22
 CH	EQU $24
 CV	EQU $25
 
-TOPLEFT	EQU $400
+LINE1	EQU $400    TOP LEFT
 PTR	EQU $06
+
+SHIPSCNT	EQU 5
+SHIPSIZE	EQU 5
 
 ****************************************
 
@@ -30,13 +33,11 @@ GameLoop	JSR DrwShips
 	JSR Input
 	JMP GameLoop
 
-DrwShips	RTS
-
 * PrCols prints the column names.
 PrCols	LDX #0
 PrCols1	LDA PrColsD,X
 	BEQ PrCols2
-	STA TOPLEFT,X
+	STA LINE1,X
 	INX
 	JMP PrCols1
 PrColsD	ASC " 12345678910"
@@ -61,12 +62,13 @@ Quit	JSR HOME
 	HEX 8D00
 	JMP $3D0       RE-ENTER DOS
 
-* MvCurosr moves the cursor to (X,Y)
+* MvCursor moves the cursor to (X,Y)
 MvCursor	STX CH
 	STY CV
 	INC CH
 	INC CV
 	JSR VTAB
+	RTS
 
 Input	JSR RDKEY2
 	CMP #$9B
@@ -91,12 +93,13 @@ Input	JSR RDKEY2
 	STA CH
 	JMP Input2
 Input1	CMP #$C1
-	BCC Input2
+	BCC Input2  A < "A"
 	CMP #$CB
-	BCS Input2
+	BCS Input2  A >= "K"
+	CLC
+	SBC #$BF    A-"A" - 2?
 	STA CV
 	JSR VTAB
-*	JSR PRBYTE
 Input2	RTS
 
 Left	DEC CH
@@ -152,10 +155,51 @@ Print2	CLC
 	PHA
 	RTS
 
-Ships	HEX 01010500   X,Y,LEN,SUNK
-	HEX 02010400
-	HEX 03010300
-	HEX 04010300
-	HEX 05010200
+DrwShips	LDA CH
+	PHA
+	LDA CV
+	PHA
+
+	LDX #1
+	LDY #1
+	JSR MvCursor
+	LDA #$B8
+	JSR COUT
+
+	PLA
+	STA CV
+	PLA
+	STA CH
+	JSR VTAB
+	RTS
+*DrwShips	LDX ShipPtr
+	LDA Ships+2,X   HORIZ?
+	STA ShipDir
+	LDA Ships+3,X   HORIZ?
+	STA ShipLen
+	LDA Ships+0,X   X-COORD
+	LDY Ships+1,X   Y-COORD
+	TAX
+	DEX
+	DEY
+	JSR MvCursor
+	LDA #$B8
+	JSR COUT
+*	CLC
+*	LDX ShipPtr
+*	ADC SHIPSIZE-1
+*	ADC ShipLen
+*	STA ShipPtr
+	RTS
+ShipPtr	HEX 00
+ShipLen	HEX 00
+ShipDir	HEX 00   0=HORIZ 1=VERT
+
+* Ship {0:X 1:Y 2:HORIZ? 3:LEN 4+:HITS}
+Ships	DFB 1,1,0,5,0,0,0,0,0
+	DFB 2,1,0,4,0,0,0,0
+	DFB 3,1,0,3,0,0,0
+	DFB 4,1,0,3,0,0,0
+	DFB 5,1,1,2,0,0
 
 * vim: set noexpandtab tabstop=9 sts=9 sw=9 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
