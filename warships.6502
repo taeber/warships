@@ -25,8 +25,11 @@ Entry	JSR TEXT
 	LDX #0
 	LDY #0
 	JSR MvCursor
-GameLoop	JSR Input
+GameLoop	JSR DrwShips
+	JSR Input
 	JMP GameLoop
+
+DrwShips	RTS
 
 * PrCols prints the column names.
 PrCols	LDX #0
@@ -60,7 +63,7 @@ MvCursor	STX CH
 
 Input	JSR RDKEY
 	CMP #$9B
-	BEQ DOS     ESC QUITS
+	BEQ Quit    ESC QUITS
 	CMP #$88    LEFT ARROW
 	BEQ Left
 	CMP #$95    RIGHT ARROW
@@ -69,8 +72,25 @@ Input	JSR RDKEY
 	BEQ Down
 	CMP #$8B    UP ARROW
 	BEQ Up
+	CMP #$B0
+	BCC Input1
+	CMP #$BA
+	BCS Input1  "1"-"9"
+	CLC
+	SBC #$AF    A-"0" + 1
+	STA CH
+	BNE Input2
+	LDA #10
+	STA CH
+	JMP Input2
+Input1	CMP #$C1
+	BCC Input2
+	CMP #$CB
+	BCS Input2
+	STA CV
+	JSR VTAB
 *	JSR PRBYTE
-	RTS
+Input2	RTS
 
 Left	DEC CH
 	LDA CH
@@ -102,8 +122,16 @@ Down	INC CV
 Down1	DEC CV
 	RTS
 
-*Exit	RTS
-DOS	JMP $3D0
+Quit	JSR HOME
+*	JSR Print
+*	ASC "Thank you for playing!"
+*	HEX 00
+	JMP $3D0       RE-ENTER DOS
 
+Ships	HEX 01010500   X,Y,LEN,SUNK
+	HEX 02010400
+	HEX 03010300
+	HEX 04010300
+	HEX 05010200
 
 * vim: set noexpandtab tabstop=9 sts=9 sw=9 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
