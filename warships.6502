@@ -29,7 +29,7 @@ Entry	JSR INIT
 	LDX #0
 	LDY #0
 	JSR MvCursor
-GameLoop	JSR DrwShips
+GameLoop	JSR DrwShps
 	JSR Input
 	JMP GameLoop
 
@@ -155,51 +155,53 @@ Print2	CLC
 	PHA
 	RTS
 
-DrwShips	LDA CH
+DrwShps	LDA CH
 	PHA
 	LDA CV
 	PHA
 
-	LDX #1
-	LDY #1
-	JSR MvCursor
-	LDA #$B8
-	JSR COUT
+	LDX #0
+	STX ShipPtr
 
-	PLA
+	LDA Ships+2,X   HORIZ?
+	STA ShipDir
+	LDA Ships+3,X   LENGTH
+	STA ShipLen
+	LDY Ships+1,X   Y-COORD
+	LDA Ships+0,X   X-COORD
+	TAX
+	JSR MvCursor
+
+	LDA ShipPtr
+	ADC #SHIPSIZE-1
+	STA ShipPtr
+DrwShps1	LDX ShipPtr
+	LDA Ships,X
+	JSR COUT
+	INC ShipPtr
+	DEC ShipLen
+	BEQ DrwShps2
+	DEC CH
+	INC CV
+	JSR VTAB
+	JMP DrwShps1
+
+DrwShps2	PLA
 	STA CV
 	PLA
 	STA CH
 	JSR VTAB
 	RTS
-*DrwShips	LDX ShipPtr
-	LDA Ships+2,X   HORIZ?
-	STA ShipDir
-	LDA Ships+3,X   HORIZ?
-	STA ShipLen
-	LDA Ships+0,X   X-COORD
-	LDY Ships+1,X   Y-COORD
-	TAX
-	DEX
-	DEY
-	JSR MvCursor
-	LDA #$B8
-	JSR COUT
-*	CLC
-*	LDX ShipPtr
-*	ADC SHIPSIZE-1
-*	ADC ShipLen
-*	STA ShipPtr
-	RTS
+
 ShipPtr	HEX 00
 ShipLen	HEX 00
 ShipDir	HEX 00   0=HORIZ 1=VERT
 
 * Ship {0:X 1:Y 2:HORIZ? 3:LEN 4+:HITS}
-Ships	DFB 1,1,0,5,0,0,0,0,0
-	DFB 2,1,0,4,0,0,0,0
-	DFB 3,1,0,3,0,0,0
-	DFB 4,1,0,3,0,0,0
-	DFB 5,1,1,2,0,0
+Ships	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
+	DFB 1,0,0,4,$B4,$B4,$B4,$B4
+	DFB 2,0,0,3,$B3,$B3,$B3
+	DFB 3,0,0,3,$C4,$C4,$C4
+	DFB 4,0,1,2,$B2,$B2
 
 * vim: set noexpandtab tabstop=9 sts=9 sw=9 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
