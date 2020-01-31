@@ -19,7 +19,7 @@ LINE1	EQU $400    TOP LEFT
 PTR	EQU $06
 
 SHIPSCNT	EQU 5
-SHIPSIZE	EQU 5
+SHIPSIZE	EQU 37
 
 ****************************************
 
@@ -163,7 +163,7 @@ DrwShps	LDA CH
 	LDX #0
 	STX ShipPtr
 
-	LDA Ships+2,X   HORIZ?
+DrwShpsL	LDA Ships+2,X   HORIZ?
 	STA ShipDir
 	LDA Ships+3,X   LENGTH
 	STA ShipLen
@@ -173,7 +173,7 @@ DrwShps	LDA CH
 	JSR MvCursor
 
 	LDA ShipPtr
-	ADC #SHIPSIZE-1
+	ADC #4
 	STA ShipPtr
 DrwShps1	LDX ShipPtr
 	LDA Ships,X
@@ -186,7 +186,12 @@ DrwShps1	LDX ShipPtr
 	JSR VTAB
 	JMP DrwShps1
 
-DrwShps2	PLA
+DrwShps2	LDX ShipPtr
+	CPX #SHIPSIZE
+	BEQ DrwShps3
+	JMP DrwShpsL
+
+DrwShps3	PLA
 	STA CV
 	PLA
 	STA CH
@@ -203,5 +208,6 @@ Ships	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
 	DFB 2,0,0,3,$B3,$B3,$B3
 	DFB 3,0,0,3,$C4,$C4,$C4
 	DFB 4,0,1,2,$B2,$B2
+* SHIPSIZE = sizeof(Ships) == 37
 
 * vim: set noexpandtab tabstop=9 sts=9 sw=9 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
