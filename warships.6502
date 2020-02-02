@@ -84,7 +84,8 @@ MvCurso1	STY CV
 	JSR VTAB
 	RTS
 
-
+* Input checks for a key press and
+* calls the appropriate handler.
 Input	JSR RDKEY2
 	CMP #$9B
 	BEQ Quit    ESC QUITS
@@ -234,17 +235,17 @@ DrwShip	LDA Ships+0,X
 	STA ShipDir
 	LDA Ships+3,X
 	STA ShipLen
-*	FOR Y=1; Y<SHIP.LEN; Y++
-	LDY #1
-DrwShip1	LDA Ships+4,X
+*	FOR Y=0; Y<SHIP.LEN; Y++
+	LDY #0
+DrwShip1	CPY ShipLen
+	BCS DrwShip2
+	LDA Ships+4,X
 	JSR COUT
-	CPY ShipLen
-	BEQ DrwShip2
 	DEC CH
 	INC CV
 	JSR VTAB
-	INY
 	INX
+	INY
 	JMP DrwShip1
 *
 DrwShip2	RTS
