@@ -16,7 +16,7 @@ CH	EQU $24
 CV	EQU $25
 MASK	EQU $32
 NORMAL	EQU %11111111
-FLASHING	EQU %01111111
+FLASHING	EQU $7F
 INVERSE	EQU %00111111
 
 LINE1	EQU $400    TOP LEFT
@@ -32,16 +32,17 @@ ScrDirty	HEX 01
 ShipCurr	HEX 00
 
 Entry	JSR INIT
-	JSR HOME
-	JSR PrCols
-	LDX #0
-	LDY #0
-	JSR MvCursor
 GameLup	LDA ScrDirty
 	BEQ GameLup1
+	JSR HOME
+	JSR PrCols
 	JSR DrwShps
 	DEC ScrDirty
-GameLup1	JSR Input
+GameLup1	LDA #0
+	STA CH
+	STA CV
+	JSR VTAB
+	JSR Input
 	JMP GameLup
 
 * PrCols prints the column names.
@@ -94,9 +95,11 @@ Input	JSR RDKEY2
 	CMP #$95    RIGHT ARROW
 	BEQ Right
 	CMP #$8A    DOWN ARROW
-	BEQ Down
+	BEQ InputDwn
 	CMP #$8B    UP ARROW
 	BEQ Up
+	CMP #$89    TAB
+	BEQ InputTab
 	CMP #$B0
 	BCC Input1
 	CMP #$BA
@@ -117,38 +120,76 @@ Input1	CMP #$C1
 	STA CV
 	JSR VTAB
 Input2	RTS
+InputDwn JMP Down
+InputTab	JMP Tab
 
-Left	DEC CH
-	LDA CH
-	BNE Left1
-	INC CH      HIT LEFT EDGE
+Left	LDX ShipCurr
+	LDY #SHIPSIZE
+	JSR ArrItem
+	LDA Ships+0,X  SHIP.X
+	BEQ Left1
+	DEC Ships+0,X  SHIP.X
+	INC ScrDirty
 Left1	RTS
 
-Right	INC CH
-	LDA CH
-	CMP #11
-	BNE Right1
-	DEC CH      HIT RIGHT EDGE
+Right	LDX ShipCurr
+	LDY #SHIPSIZE
+	JSR ArrItem
+	INC Ships+0,X  SHIP.X
+*
+	LDA Ships+0,X  SHIP.X
+	LDY Ships+2,X  SHIP.DIR
+	BEQ Right1
+* CHECK IF S.DIR=H && S.X + S.LEN < 10
+	CLC
+	ADC Ships+3,X  SHIP.LEN
+	SEC
+	SBC #1
+Right1	CMP #10
+	BCC Right2
+	DEC Ships+0,X  HIT RIGHT EDGE
 	RTS
-Right1	LDA ShipCurr
+Right2	INC ScrDirty
 	RTS
 
-Up	DEC CV
-	LDA CV
-	BEQ Up1
-	JSR VTAB
+Up	LDX ShipCurr
+	LDY #SHIPSIZE
+	JSR ArrItem
+	LDA Ships+1,X  SHIP.Y
+	BEQ Left1
+	DEC Ships+1,X  SHIP.Y
+	INC ScrDirty
+Up1	RTS
+
+Down	LDX ShipCurr
+	LDY #SHIPSIZE
+	JSR ArrItem
+	INC Ships+1,X  SHIP.Y
+*
+	LDA Ships+1,X  SHIP.Y
+	LDY Ships+2,X  SHIP.DIR
+	BNE Down1
+* CHECK IF S.DIR=V && S.X + S.LEN < 10
+	CLC
+	ADC Ships+3,X  SHIP.LEN
+	SEC
+	SBC #1
+Down1	CMP #10
+	BCC Down2
+	DEC Ships+1,X  HIT BOTTOM
 	RTS
-Up1	INC CV
+Down2	INC ScrDirty
 	RTS
 
-Down	INC CV
-	LDA CV
-	CMP #11
-	BEQ Down1
-	JSR VTAB
-	RTS
-Down1	DEC CV
-	RTS
+
+Tab	INC ScrDirty
+	INC ShipCurr
+	LDA ShipCurr
+	CMP #SHIPSCNT
+	BNE Tab1
+	LDA #0
+	STA ShipCurr
+Tab1	RTS
 
 * Prints an ASCII string.
 * From Wagner's "Assembly Lines" pg 125
@@ -185,12 +226,12 @@ Print2	CLC
 ArrItem	STY ArrItemT
 	LDA #0
 	CLC
-ArrItem1 DEX
+ArrItem1	DEX
 	CPX #$FF
 	BEQ ArrItem2
 	ADC ArrItemT
 	JMP ArrItem1
-ArrItem2 TAX
+ArrItem2	TAX
 	RTS
 *
 ArrItemT HEX 00
@@ -200,14 +241,9 @@ DrwShps	LDA CH
 	PHA
 	LDA CV
 	PHA
-	LDA MASK
-	PHA
-	LDA #INVERSE
-	STA MASK
 *	FOR I=[0,SHIPSCNT): DrwShip(I)
 	LDX #0
 	STX DrwShpsS
-*
 DrwShps1	LDY #SHIPSIZE
 	JSR ArrItem
 	JSR DrwShip
@@ -215,9 +251,16 @@ DrwShps1	LDY #SHIPSIZE
 	LDX DrwShpsS
 	CPX #SHIPSCNT
 	BNE DrwShps1
-*
-DrwShps2	PLA
+*	DRAW CURRENT SHIP INVERSE
+	LDA #INVERSE
 	STA MASK
+	LDX ShipCurr
+	LDY #SHIPSIZE
+	JSR ArrItem
+	JSR DrwShip
+	LDA #NORMAL
+	STA MASK
+*
 	PLA
 	STA CV
 	PLA
@@ -238,17 +281,19 @@ DrwShip	LDA Ships+0,X
 *	FOR Y=0; Y<SHIP.LEN; Y++
 	LDY #0
 DrwShip1	CPY ShipLen
-	BCS DrwShip2
+	BCS DrwShip3
 	LDA Ships+4,X
 	JSR COUT
+	LDA ShipDir
+	BNE DrwShip2
 	DEC CH
 	INC CV
 	JSR VTAB
-	INX
+DrwShip2	INX
 	INY
 	JMP DrwShip1
 *
-DrwShip2	RTS
+DrwShip3	RTS
 *
 DrwShipI HEX 00
 ShipLen	HEX 00
