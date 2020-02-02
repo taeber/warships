@@ -100,6 +100,8 @@ Input	JSR RDKEY2
 	BEQ Up
 	CMP #$89    TAB
 	BEQ InputTab
+	CMP #$D2    "R"
+	BEQ InputR
 	CMP #$B0
 	BCC Input1
 	CMP #$BA
@@ -122,6 +124,7 @@ Input1	CMP #$C1
 Input2	RTS
 InputDwn JMP Down
 InputTab	JMP Tab
+InputR	JMP Rotate
 
 Left	LDX ShipCurr
 	LDY #SHIPSIZE
@@ -181,7 +184,6 @@ Down1	CMP #10
 Down2	INC ScrDirty
 	RTS
 
-
 Tab	INC ScrDirty
 	INC ShipCurr
 	LDA ShipCurr
@@ -190,6 +192,38 @@ Tab	INC ScrDirty
 	LDA #0
 	STA ShipCurr
 Tab1	RTS
+
+Rotate	LDX ShipCurr
+	LDY #SHIPSIZE
+	JSR ArrItem
+	LDA Ships+2,X  SHIP.DIR
+	EOR #$FF
+	STA Ships+2,X
+	BNE Rotate2
+* VERTICAL; CHECK HEIGHT
+	LDA Ships+1,X  SHIP.Y
+	CLC
+	ADC Ships+3,X  SHIP.LEN
+	CMP #10
+	BCC Rotate3
+	LDA #10
+	SEC
+	SBC Ships+3,X
+	STA Ships+1,X
+	JMP Rotate3
+* HORIZONTAL; CHECK WIDTH
+Rotate2	LDA Ships+0,X  SHIP.X
+	CLC
+	ADC Ships+3,X  SHIP.LEN
+	CMP #10
+	BCC Rotate3
+	LDA #10
+	SEC
+	SBC Ships+3,X
+	STA Ships+0,X
+*
+Rotate3	INC ScrDirty
+	RTS
 
 * Prints an ASCII string.
 * From Wagner's "Assembly Lines" pg 125
