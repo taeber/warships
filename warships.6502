@@ -14,14 +14,22 @@ VTAB	EQU $FC22
 
 CH	EQU $24
 CV	EQU $25
+MASK	EQU $32
+NORMAL	EQU %11111111
+FLASHING	EQU %01111111
+INVERSE	EQU %00111111
 
 LINE1	EQU $400    TOP LEFT
 PTR	EQU $06
 
 SHIPSCNT	EQU 5
-SHIPSIZE	EQU 37
+SHIPSIZE	EQU 9
 
 ****************************************
+	JMP Entry
+
+ScrDirty	HEX 01
+ShipCurr	HEX 00
 
 Entry	JSR INIT
 	JSR HOME
@@ -29,9 +37,12 @@ Entry	JSR INIT
 	LDX #0
 	LDY #0
 	JSR MvCursor
-GameLoop	JSR DrwShps
-	JSR Input
-	JMP GameLoop
+GameLup	LDA ScrDirty
+	BEQ GameLup1
+	JSR DrwShps
+	DEC ScrDirty
+GameLup1	JSR Input
+	JMP GameLup
 
 * PrCols prints the column names.
 PrCols	LDX #0
@@ -62,13 +73,17 @@ Quit	JSR HOME
 	HEX 8D00
 	JMP $3D0       RE-ENTER DOS
 
+* MvCursAY moves the cursor to (A,Y)
+MvCursAY	STA CH
+	JMP MvCurso1
 * MvCursor moves the cursor to (X,Y)
 MvCursor	STX CH
-	STY CV
+MvCurso1	STY CV
 	INC CH
 	INC CV
 	JSR VTAB
 	RTS
+
 
 Input	JSR RDKEY2
 	CMP #$9B
@@ -113,7 +128,9 @@ Right	INC CH
 	CMP #11
 	BNE Right1
 	DEC CH      HIT RIGHT EDGE
-Right1	RTS
+	RTS
+Right1	LDA ShipCurr
+	RTS
 
 Up	DEC CV
 	LDA CV
@@ -155,59 +172,96 @@ Print2	CLC
 	PHA
 	RTS
 
+* ArrItem calculates the offset of an
+* item in an array.
+* INPUT:
+*   X item number
+*   Y size of each element
+* OUTPUT:
+*   X contains the offset
+*   A contains the offset
+*   Y is unchanged.
+ArrItem	STY ArrItemT
+	LDA #0
+	CLC
+ArrItem1 DEX
+	CPX #$FF
+	BEQ ArrItem2
+	ADC ArrItemT
+	JMP ArrItem1
+ArrItem2 TAX
+	RTS
+*
+ArrItemT HEX 00
+
+* DrwShps draws all 5 ships.
 DrwShps	LDA CH
 	PHA
 	LDA CV
 	PHA
-
+	LDA MASK
+	PHA
+	LDA #INVERSE
+	STA MASK
+*	FOR I=[0,SHIPSCNT): DrwShip(I)
 	LDX #0
-	STX ShipPtr
-
-DrwShpsL	LDA Ships+2,X   HORIZ?
-	STA ShipDir
-	LDA Ships+3,X   LENGTH
-	STA ShipLen
-	LDY Ships+1,X   Y-COORD
-	LDA Ships+0,X   X-COORD
-	TAX
-	JSR MvCursor
-
-	LDA ShipPtr
-	ADC #4
-	STA ShipPtr
-DrwShps1	LDX ShipPtr
-	LDA Ships,X
-	JSR COUT
-	INC ShipPtr
-	DEC ShipLen
-	BEQ DrwShps2
-	DEC CH
-	INC CV
-	JSR VTAB
-	JMP DrwShps1
-
-DrwShps2	LDX ShipPtr
-	CPX #SHIPSIZE
-	BEQ DrwShps3
-	JMP DrwShpsL
-
-DrwShps3	PLA
+	STX DrwShpsS
+*
+DrwShps1	LDY #SHIPSIZE
+	JSR ArrItem
+	JSR DrwShip
+	INC DrwShpsS
+	LDX DrwShpsS
+	CPX #SHIPSCNT
+	BNE DrwShps1
+*
+DrwShps2	PLA
+	STA MASK
+	PLA
 	STA CV
 	PLA
 	STA CH
 	JSR VTAB
 	RTS
+*
+DrwShpsS	HEX 00
 
-ShipPtr	HEX 00
+* DrwShip draws the X-th ship.
+DrwShip	LDA Ships+0,X
+	LDY Ships+1,X
+	JSR MvCursAY
+	LDA Ships+2,X
+	STA ShipDir
+	LDA Ships+3,X
+	STA ShipLen
+*	FOR Y=1; Y<SHIP.LEN; Y++
+	LDY #1
+DrwShip1	LDA Ships+4,X
+	JSR COUT
+	CPY ShipLen
+	BEQ DrwShip2
+	DEC CH
+	INC CV
+	JSR VTAB
+	INY
+	INX
+	JMP DrwShip1
+*
+DrwShip2	RTS
+*
+DrwShipI HEX 00
 ShipLen	HEX 00
 ShipDir	HEX 00   0=HORIZ 1=VERT
 
-* Ship {0:X 1:Y 2:HORIZ? 3:LEN 4+:HITS}
+* type Ship struct (size 9)
+*   { 0:X 1:Y
+*     2:HORIZ?
+*     3:LEN
+*     4-8:HITS }
 Ships	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
-	DFB 1,0,0,4,$B4,$B4,$B4,$B4
-	DFB 2,0,0,3,$B3,$B3,$B3
-	DFB 3,0,0,3,$C4,$C4,$C4
-	DFB 4,0,1,2,$B2,$B2
-* SHIPSIZE = sizeof(Ships) == 37
+	DFB 1,0,0,4,$B4,$B4,$B4,$B4,0
+	DFB 2,0,0,3,$B3,$B3,$B3,0,0
+	DFB 3,0,0,3,$C4,$C4,$C4,0,0
+	DFB 4,0,1,2,$B2,$B2,0,0,0
 
 * vim: set noexpandtab tabstop=9 sts=9 sw=9 invlist textwidth=40 colorcolumn=40 filetype=asmMerlin65816:
