@@ -111,6 +111,8 @@ Input	JSR RDKEY2
 	BEQ Quit    ESC QUITS
 	CMP #SPACE
 	BEQ InputSpc  SPACE
+	CMP #$8D    RETURN/CTRL-M
+	BEQ InputRet
 	CMP #$88    LEFT ARROW
 	BEQ Left
 	CMP #$95    RIGHT ARROW
@@ -147,6 +149,9 @@ InputNum	CLC
 InputNu1	STA Ships   CURSOR.X
 	DEC Ships
 	RTS
+InputRet LDA ShipCurr
+	BNE Input2
+	JMP Fire
 
 Left	LDX ShipCurr
 	LDY #SHIPSIZE
@@ -412,6 +417,12 @@ DrwTrys1	CPX #100
 DrwTrys2	INX
 	JMP DrwTrys1
 DrwTrys3	RTS
+
+Fire	JSR Notify
+	ASC "Fire!"
+	HEX 00
+	JSR RDKEY2   WAIT FOR ANY KEY
+	RTS
 
 hits	HEX 00
 *            1 2 3 4 5 6 7 8 9 10
