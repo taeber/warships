@@ -72,7 +72,7 @@ Play	LDA #0
 	LDA Player
 	BNE Player2
 Player1	JSR HOME
-	JSR PrScore
+*	JSR PrScore
 	JSR PrCols
 	JSR DrwTrys
 	JSR PrCursor
@@ -81,6 +81,7 @@ Player1	JSR HOME
 Player2	JSR HOME
 	JSR PrCols
 	JSR DrwShps
+	JSR DrwTrys
 	JSR RandLoc
 	JSR PrCursor
 	JSR Fire
@@ -480,23 +481,42 @@ EShips	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
 *   CH=2
 * NEXT
 DrwTrys	LDA #0
+	STA DrwTrysX
+	LDA Player
+	BEQ DrwTrys0
+	LDA #100
+	STA DrwTrysX
+DrwTrys0	LDA #0
+	STA DrwTrysI
 	TAY
 	TAX
 	JSR MvCursor
-DrwTrys1	CPX #100
+DrwTrys1	LDX DrwTrysI
+	CPX #100
 	BEQ DrwTrys3
-	LDA tries,X
-	JSR COUT
-	INY
+	LDA DrwTrysX
+	BEQ DrwTrys9
+	CLC
+	ADC DrwTrysI
+	TAX
+DrwTrys9	LDA tries,X
+	CMP #$A0      SPACE
+	BNE DrwTrys8
+	INC CH
+	JMP DrwTrys7
+DrwTrys8	JSR COUT
+DrwTrys7	INY
 	CPY #10
 	BNE DrwTrys2
 	LDY #0
 	JSR CROUT
 	LDA #1
 	STA CH
-DrwTrys2	INX
+DrwTrys2	INC DrwTrysI
 	JMP DrwTrys1
 DrwTrys3	RTS
+DrwTrysI	HEX 00
+DrwTrysX HEX 00
 
 * Fire checks to see if an enemy ship
 * is under the cursor. If not, it marks
@@ -645,8 +665,7 @@ MvCurso1	STY CV
 
 PressKey	JMP RDKEY2    JSR&RTS
 
-hits	HEX 00
-	HEX 10
+hits	DFB 0,0
 *            1 2 3 4 5 6 7 8 9 10
 tries	HEX A0A0A0A0A0A0A0A0A0A0  A
 	HEX A0A0A0A0A0A0A0A0A0A0  B
