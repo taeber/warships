@@ -60,6 +60,7 @@ Setup	LDA ScrDirty
 	DEC ScrDirty
 Setup1	JSR Input
 	JMP Setup
+*
 Play	LDA #0
 	STA ShipCurr
 	LDA hits
@@ -67,18 +68,17 @@ Play	LDA #0
 	BEQ Win
 	LDA hits+1
 	CMP #HITSMAX
-	BEQ Defeat
+	BEQ Loss
 	LDA Player
 	BNE Player2
 Player1	JSR HOME
+	JSR PrScore
 	JSR PrCols
 	JSR DrwTrys
 	JSR PrCursor
 	JSR Input
 	JMP Play
-Player2	LDA #0
-	STA ShipCurr
-	JSR HOME
+Player2	JSR HOME
 	JSR PrCols
 	JSR DrwShps
 	JSR RandLoc
@@ -104,14 +104,53 @@ RandLocY	LDA RNDH
 	TAY
 RandLoc1	STX Ships+0    CURSOR.X
 	STY Ships+1    CURSOR.Y
-	JSR tried
-	BEQ RandLoc2
-	INC RNDL       CHANGE THE
-	CMP RNDH        RANDOM BYTES
-	BCC RandLoc     TO PICK A
-	INC RNDH        DIFF LOCATION
-	JMP RandLoc
-RandLoc2	RTS
+RandLoc2	JSR tried
+	BEQ RandLoc5
+*	JSR Notify
+*	ASC "DEBUG: RETRY"
+*	HEX 00
+*	JSR PrCursor
+*	JSR PressKey
+	LDA #9
+	CMP Ships+0
+	BNE RandLoc3
+	CMP Ships+1
+	BNE RandLoc4
+	LDA #0
+	STA Ships+0
+	STA Ships+1
+	JMP RandLoc2
+RandLoc3 JSR Right
+	JMP RandLoc2
+RandLoc4 JSR Down
+	LDA #0
+	STA Ships+0
+	JMP RandLoc2
+RandLoc5	RTS
+
+PrScore	LDA CV
+	PHA
+	LDA CH
+	PHA
+	SEC
+	LDA WNDBTM
+	SBC #2
+	STA CV
+	LDA #0
+	STA CH
+	JSR VTAB
+	LDA hits
+	JSR PRBYTE
+	LDA #$A0
+	JSR COUT
+	LDA hits+1
+	JSR PRBYTE
+	PLA
+	STA CH
+	PLA
+	STA CV
+	JSR VTAB
+	RTS
 
 * PrCols prints the column names.
 PrCols	LDX #0
@@ -266,7 +305,7 @@ Rotate	LDX ShipCurr
 	LDY #SHIPSIZE
 	JSR ArrItem
 	LDA Ships+2,X  SHIP.DIR
-	EOR #$FF
+	EOR #%00000001
 	STA Ships+2,X
 	BNE Rotate2
 * VERTICAL; CHECK HEIGHT
@@ -508,7 +547,7 @@ Fire3	LDX triedTmp
 	LDA FireCh
 	STA tries,X
 	LDA Player
-	EOR #$FF
+	EOR #%00000001
 	STA Player
 	RTS
 FireI	HEX 00
@@ -606,7 +645,8 @@ MvCurso1	STY CV
 
 PressKey	JMP RDKEY2    JSR&RTS
 
-hits	DFB 0,0
+hits	HEX 00
+	HEX 10
 *            1 2 3 4 5 6 7 8 9 10
 tries	HEX A0A0A0A0A0A0A0A0A0A0  A
 	HEX A0A0A0A0A0A0A0A0A0A0  B
