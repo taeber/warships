@@ -11,7 +11,10 @@ COUT	EQU $FDED
 CROUT	EQU $FD8E
 RDKEY2	EQU $FD0C
 VTAB	EQU $FC22
+WAIT	EQU $FCA8   A:4 ~1s A:2 ~.5s
 
+RNDL	EQU $4E
+RNDH	EQU $4F
 WNDLFT	EQU $20     LEFT MARGIN
 WNDBTM	EQU $23     BOTTOM MARGIN
 CH	EQU $24
@@ -24,18 +27,31 @@ INVERSE	EQU %00111111
 LINE1	EQU $400    TOP LEFT
 PTR	EQU $06
 
-SPACE	EQU $A0
-
 SHIPSCNT	EQU 5
 SHIPSIZE	EQU 9
+HITSMAX	EQU 17    5+4+3+3+2
 
 ****************************************
 	JMP Entry
 
 ScrDirty	HEX 01
 ShipCurr	HEX 01
+Player	HEX 00
 
 Entry	JSR INIT
+	JSR HOME
+	JSR Print
+	ASC "WARSHIPS"
+	HEX 8D00
+	JSR PressKey
+	JSR Print
+	ASC "A GAME FOR ROONA"
+	HEX 8D
+	ASC "HAPPY BIRTHDAY!"
+	HEX 8D
+	ASC "LOVE, UNCLE NIGEL"
+	HEX 8D00
+	JSR PressKey
 Setup	LDA ScrDirty
 	BEQ Setup1
 	JSR HOME
@@ -46,18 +62,56 @@ Setup1	JSR Input
 	JMP Setup
 Play	LDA #0
 	STA ShipCurr
-Play1	JSR HOME
+	LDA hits
+	CMP #HITSMAX
+	BEQ Win
+	LDA hits+1
+	CMP #HITSMAX
+	BEQ Defeat
+	LDA Player
+	BNE Player2
+Player1	JSR HOME
 	JSR PrCols
 	JSR DrwTrys
-*	JSR PrHits
-*	JSR PrMisses
 	JSR PrCursor
 	JSR Input
-	JMP Play1
-*	JSR Notify
-*	ASC "NOT IMPL YET!"
-*	HEX 00
-*	BRK
+	JMP Play
+Player2	LDA #0
+	STA ShipCurr
+	JSR HOME
+	JSR PrCols
+	JSR DrwShps
+	JSR RandLoc
+	JSR PrCursor
+	JSR Fire
+	JMP Play
+Win	JMP Victory
+Loss	JMP Defeat
+
+RandLoc	LDA RNDL
+	AND #$0F
+	TAX
+	CPX #10
+	BCC RandLocY
+	SBC #9    A-10 SINCE CARRY SET
+	TAX
+RandLocY	LDA RNDH
+	AND #$0F
+	TAY
+	CPY #10
+	BCC RandLoc1
+	SBC #9    A-10 SINCE CARRY SET
+	TAY
+RandLoc1	STX Ships+0    CURSOR.X
+	STY Ships+1    CURSOR.Y
+	JSR tried
+	BEQ RandLoc2
+	INC RNDL       CHANGE THE
+	CMP RNDH        RANDOM BYTES
+	BCC RandLoc     TO PICK A
+	INC RNDH        DIFF LOCATION
+	JMP RandLoc
+RandLoc2	RTS
 
 * PrCols prints the column names.
 PrCols	LDX #0
@@ -84,8 +138,7 @@ PrRows2	RTS
 
 PrCursor	LDA Ships      CURSOR.X
 	LDY Ships+1    CURSOR.Y
-	JSR MvCursAY
-	RTS
+	JMP MvCursAY
 
 Quit	JSR HOME
 	JSR Print
@@ -93,24 +146,13 @@ Quit	JSR HOME
 	HEX 8D00
 	JMP $3D0       RE-ENTER DOS
 
-* MvCursAY moves the cursor to (A,Y)
-MvCursAY	STA CH
-	JMP MvCurso1
-* MvCursor moves the cursor to (X,Y)
-MvCursor	STX CH
-MvCurso1	STY CV
-	INC CH
-	INC CV
-	JSR VTAB
-	RTS
-
 * Input checks for a key press and
 * calls the appropriate handler.
 Input	JSR RDKEY2
-	CMP #$9B
-	BEQ Quit    ESC QUITS
-	CMP #SPACE
-	BEQ InputSpc  SPACE
+	CMP #$9B    ESCAPE
+	BEQ Quit
+	CMP #$A0    SPACE
+	BEQ InputSpc
 	CMP #$8D    RETURN/CTRL-M
 	BEQ InputRet
 	CMP #$88    LEFT ARROW
@@ -335,8 +377,7 @@ DrwShps1	LDY #SHIPSIZE
 	STA CV
 	PLA
 	STA CH
-	JSR VTAB
-	RTS
+	JMP VTAB
 *
 DrwShpsS	HEX 00
 
@@ -382,7 +423,7 @@ Ships	DFB 0,0,0,1,$00,0,0,0,0
 	DFB 3,0,0,3,$C4,$C4,$C4,0,0
 	DFB 4,0,1,2,$B2,$B2,0,0,0
 * ENEMEY SHIPS
-	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
+EShips	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
 	DFB 1,0,0,4,$B4,$B4,$B4,$B4,0
 	DFB 2,0,0,3,$B3,$B3,$B3,0,0
 	DFB 3,0,0,3,$C4,$C4,$C4,0,0
@@ -418,15 +459,167 @@ DrwTrys2	INX
 	JMP DrwTrys1
 DrwTrys3	RTS
 
-Fire	JSR Notify
-	ASC "Fire!"
+* Fire checks to see if an enemy ship
+* is under the cursor. If not, it marks
+* the cooresponding tries location with
+* a "-". If so, the tries location is
+* marked with an "X" and the hits count
+* is incremented. If hits count equals
+* the sum of the ships lengths, the
+* player wins and the game ends.
+*	FOR I=1; I<=ESHIPS.CNT; I++
+Fire	JSR tried
+	BEQ Fire0
+	RTS
+Fire0	LDX #1
+	STX FireI
+Fire1	LDA FireI
+	CMP #SHIPSCNT+1
+	BEQ Miss
+	LDX Player
+	BNE Fire2
+	CLC
+	ADC #5      ENEMY SHIPS OFFSET
+Fire2	TAX
+	LDY #SHIPSIZE
+	JSR ArrItem
+	JSR fireAt
+	BCS Hit
+	INC FireI
+	JMP Fire1
+Hit	JSR Notify
+	ASC "Hit!"
 	HEX 00
-	JSR RDKEY2   WAIT FOR ANY KEY
+	JSR PrCursor
+	JSR PressKey
+	LDX Player
+	INC hits,X
+	LDA #$D8       "X"
+	STA FireCh
+	JMP Fire3
+Miss	JSR Notify
+	ASC "Miss!"
+	HEX 00
+	JSR PrCursor
+	JSR PressKey
+	LDA #$AD       "-"
+	STA FireCh
+Fire3	LDX triedTmp
+	LDA FireCh
+	STA tries,X
+	LDA Player
+	EOR #$FF
+	STA Player
+	RTS
+FireI	HEX 00
+FireCh	HEX 00
+
+* tried checks to see if the current
+* location was already fired upon.
+tried	LDA #0
+	STA triedTmp
+	LDX Ships+1    CURSOR.Y
+	LDY #10
+	JSR ArrItem
+	STX triedTmp
+	CLC
+	LDA Ships+0    CURSOR.X
+	ADC triedTmp
+	LDY Player
+	BEQ tried1     AI IS FIRING
+	CLC
+	ADC #100       USE enTries
+tried1	STA triedTmp
+	TAX
+	LDA #$A0
+	CMP tries,X
+	RTS
+triedTmp	HEX 00         OFFSET
+
+
+*fireAt(i,j)
+*  X <- offset from Ships
+* if VERT
+*   x == i
+*   y <= j < y+len
+* if HORZ
+*   y == j
+*   x <= i < x+len
+* Interp Carry cleared as "No Hit".
+fireAt	LDA Ships+2,X   SHIP.HORIZ?
+	BNE fireAtH
+fireAtV	LDA Ships+0,X   SHIP.X
+	CMP Ships+0     CURSOR.X
+	BNE fireAtMs
+	LDA Ships+1     CURSOR.Y
+	CMP Ships+1,X   SHIP.Y
+	BCC fireAtMs
+	CLC
+	LDA Ships+1,X   SHIP.Y
+	ADC Ships+3,X   SHIP.LEN
+	TAY
+	DEY
+	TYA
+	CMP Ships+1     CURSOR.Y
+	BCS fireAtHt
+	JMP fireAtMs
+fireAtHt	SEC
+	RTS
+fireAtH	LDA Ships+1,X   SHIP.Y
+	CMP Ships+1     CURSOR.Y
+	BNE fireAtMs
+	LDA Ships+0     CURSOR.X
+	CMP Ships+0,X   SHIP.X
+	BCC fireAtMs
+	CLC
+	LDA Ships+0,X   SHIP.X
+	ADC Ships+3,X   SHIP.LEN
+	TAY
+	DEY
+	TYA
+	CMP Ships+0     CURSOR.X
+	BCS fireAtHt
+fireAtMs	CLC
 	RTS
 
-hits	HEX 00
+Victory	JSR Notify
+	ASC "VICTORY! YOU WON!"
+	HEX 00
+	JSR PressKey
+	JMP Quit
+
+Defeat	JSR Notify
+	ASC "DEFEAT! YOU LOST!"
+	HEX 00
+	JSR PressKey
+	JMP Quit
+
+* MvCursAY moves the cursor to (A,Y)
+MvCursAY	STA CH
+	JMP MvCurso1
+* MvCursor moves the cursor to (X,Y)
+MvCursor	STX CH
+MvCurso1	STY CV
+	INC CH
+	INC CV
+	JMP VTAB
+
+PressKey	JMP RDKEY2    JSR&RTS
+
+hits	DFB 0,0
 *            1 2 3 4 5 6 7 8 9 10
 tries	HEX A0A0A0A0A0A0A0A0A0A0  A
+	HEX A0A0A0A0A0A0A0A0A0A0  B
+	HEX A0A0A0A0A0A0A0A0A0A0  C
+	HEX A0A0A0A0A0A0A0A0A0A0  D
+	HEX A0A0A0A0A0A0A0A0A0A0  E
+	HEX A0A0A0A0A0A0A0A0A0A0  F
+	HEX A0A0A0A0A0A0A0A0A0A0  G
+	HEX A0A0A0A0A0A0A0A0A0A0  H
+	HEX A0A0A0A0A0A0A0A0A0A0  I
+	HEX A0A0A0A0A0A0A0A0A0A0  J
+*            1 2 3 4 5 6 7 8 9 10
+enTries	HEX A0A0A0A0A0A0A0A0A0A0  A
 	HEX A0A0A0A0A0A0A0A0A0A0  B
 	HEX A0A0A0A0A0A0A0A0A0A0  C
 	HEX A0A0A0A0A0A0A0A0A0A0  D
