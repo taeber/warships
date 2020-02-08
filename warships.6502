@@ -30,6 +30,7 @@ PTR	EQU $06
 SHIPSCNT	EQU 5
 SHIPSIZE	EQU 6
 HITSMAX	EQU 17    5+4+3+3+2
+NAMEMAX	EQU 10
 
 ****************************************
 	JMP Entry
@@ -37,6 +38,82 @@ HITSMAX	EQU 17    5+4+3+3+2
 ScrDirty	HEX 01
 ShipCurr	HEX 01
 Player	HEX 00
+Name     ASC "PLAYER1"
+	HEX 000000    NAMEMAX
+	HEX 00
+
+InstrSet	LDA #15
+	STA WNDLFT
+	LDA #1
+	STA CV
+	STA CH
+	JSR VTAB
+	JSR Print
+	ASC "PLACE YOUR SHIPS"
+	HEX 8D8D
+	ASC "ARROWS - MOVE"
+	HEX 8D
+	ASC "   TAB - SWITCH"
+	HEX 8D
+	ASC "     R - ROTATE"
+	HEX 8D
+	ASC " SPACE - DONE"
+	HEX 8D
+	ASC "   ESC - QUITS"
+	HEX 8D00
+	LDA #0
+	STA WNDLFT
+	STA CV
+	STA CH
+	JMP VTAB    JMP&RTS
+
+InstrYou	LDA #15
+	STA WNDLFT
+	LDA #1
+	STA CV
+	STA CH
+	JSR VTAB
+	JSR Print
+	ASC "   YOUR TURN"
+	HEX 8D8D
+	ASC "ARROWS - AIM"
+	HEX 8D
+	ASC " ENTER - FIRE"
+	HEX 8D
+	ASC "   A-J - COLUMN"
+	HEX 8D
+	ASC "   1-9 - ROW"
+	HEX 8D
+	ASC "     0 - ROW 10"
+	HEX 8D
+	ASC "   ESC - QUITS"
+	HEX 8D00
+	LDA #0
+	STA WNDLFT
+	STA CV
+	STA CH
+	JMP VTAB    JMP&RTS
+
+
+InstrThm	LDA #15
+	STA WNDLFT
+	LDA #1
+	STA CV
+	STA CH
+	JSR VTAB
+	JSR Print
+	ASC "  THEIR TURN"
+	HEX 8D8D
+	ASC "PRESS ANY KEY"
+	HEX 8D
+	ASC " TO CONTINUE"
+	HEX 8D00
+	LDA #0
+	STA WNDLFT
+	STA CV
+	STA CH
+	JMP VTAB    JMP&RTS
+
 
 Entry	JSR INIT
 	JSR HOME
@@ -46,10 +123,12 @@ Entry	JSR INIT
 	JSR PressKey
 	JSR Print
 	ASC "A GAME FOR ROONA"
+	HEX 8D8D
+	ASC "Happy birthday, Roona!"
 	HEX 8D
-	ASC "HAPPY BIRTHDAY!"
+	ASC "Love,"
 	HEX 8D
-	ASC "LOVE, UNCLE NIGEL"
+	ASC "Uncle Nigel"
 	HEX 8D00
 	JSR PressKey
 Setup	LDA ScrDirty
@@ -58,6 +137,7 @@ Setup	LDA ScrDirty
 	JSR PrCols
 	JSR DrwShps
 	DEC ScrDirty
+	JSR InstrSet
 Setup1	JSR Input
 	JMP Setup
 *
@@ -72,6 +152,7 @@ Play	LDA #0
 	LDA Player
 	BNE Player2
 Player1	JSR HOME
+	JSR InstrYou
 *	JSR PrScore
 	JSR PrCols
 	JSR DrwTrys
@@ -79,6 +160,7 @@ Player1	JSR HOME
 	JSR Input
 	JMP Play
 Player2	JSR HOME
+	JSR InstrThm
 	JSR PrCols
 	JSR DrwShps
 	JSR DrwTrys
@@ -556,7 +638,6 @@ Sank	JSR Notify
 	ASC "Sank!"
 	HEX 00
 Hit1	JSR PrCursor
-	JSR PressKey
 	LDX Player
 	INC hits,X
 	LDA #$D8       "X"
@@ -565,13 +646,14 @@ Hit1	JSR PrCursor
 Miss	JSR Notify
 	ASC "Miss!"
 	HEX 00
-	JSR PrCursor
-	JSR PressKey
 	LDA #$AD       "-"
 	STA FireCh
 Fire3	LDX triedTmp
 	LDA FireCh
 	STA tries,X
+	JSR DrwTrys
+	JSR PrCursor
+	JSR PressKey
 	LDA Player
 	EOR #%00000001
 	STA Player
