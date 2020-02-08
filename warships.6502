@@ -28,7 +28,7 @@ LINE1	EQU $400    TOP LEFT
 PTR	EQU $06
 
 SHIPSCNT	EQU 5
-SHIPSIZE	EQU 9
+SHIPSIZE	EQU 6
 HITSMAX	EQU 17    5+4+3+3+2
 
 ****************************************
@@ -440,8 +440,7 @@ DrwShip1	CPY ShipLen
 	DEC CH
 	INC CV
 	JSR VTAB
-DrwShip2	INX
-	INY
+DrwShip2	INY
 	JMP DrwShip1
 *
 DrwShip3	RTS
@@ -454,20 +453,21 @@ ShipDir	HEX 00   0=HORIZ 1=VERT
 *   { 0:X 1:Y
 *     2:HORIZ?
 *     3:LEN
-*     4-8:HITS }
+*     4:GRAPHIC
+*     5:REMAINING  }
 * Ships[0] USED FOR SIMPLER INPUT SUBR.
-Ships	DFB 0,0,0,1,$00,0,0,0,0
-	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
-	DFB 1,0,0,4,$B4,$B4,$B4,$B4,0
-	DFB 2,0,0,3,$B3,$B3,$B3,0,0
-	DFB 3,0,0,3,$C4,$C4,$C4,0,0
-	DFB 4,0,1,2,$B2,$B2,0,0,0
+Ships	DFB 0,0,0,1,$00,$FF
+	DFB 0,0,0,5,$B5,5
+	DFB 1,0,0,4,$B4,4
+	DFB 2,0,0,3,$B3,3
+	DFB 3,0,0,3,$C4,3
+	DFB 4,0,1,2,$B2,2
 * ENEMEY SHIPS
-EShips	DFB 0,0,0,5,$B5,$B5,$B5,$B5,$B5
-	DFB 1,0,0,4,$B4,$B4,$B4,$B4,0
-	DFB 2,0,0,3,$B3,$B3,$B3,0,0
-	DFB 3,0,0,3,$C4,$C4,$C4,0,0
-	DFB 4,0,1,2,$B2,$B2,0,0,0
+EShips	DFB 0,0,0,5,$B5,5
+	DFB 1,0,0,4,$B4,4
+	DFB 2,0,0,3,$B3,3
+	DFB 3,0,0,3,$C4,3
+	DFB 4,0,1,2,$B2,2
 
 * Y = 0
 * FOR X=0; X<100; X++
@@ -546,10 +546,16 @@ Fire2	TAX
 	BCS Hit
 	INC FireI
 	JMP Fire1
-Hit	JSR Notify
+Hit	DEC Ships+5,X  SHIP.HITSLEFT
+	BEQ Sank
+	JSR Notify
 	ASC "Hit!"
 	HEX 00
-	JSR PrCursor
+	JMP Hit1
+Sank	JSR Notify
+	ASC "Sank!"
+	HEX 00
+Hit1	JSR PrCursor
 	JSR PressKey
 	LDX Player
 	INC hits,X
