@@ -52,7 +52,7 @@ Name     ASC "PLAYER1"
 *     4:GRAPHIC
 *     5:REMAINING  }
 * Ships[0] USED FOR SIMPLER INPUT SUBR.
-Ships	DFB 0,0,0,1,$00,$FF
+Ships	DFB 0,0,0,1,$A0,$FF
 	DFB 0,0,0,5,$B5,5
 	DFB 1,0,0,4,$B4,4
 	DFB 2,0,0,3,$B3,3
@@ -210,10 +210,10 @@ Player1	JSR HOME
 Player2	JSR HOME
 	JSR InstrThm
 	JSR PrCols
-	JSR DrwShps
-	JSR DrwTrys
 	JSR RandLoc
 	JSR PrCursor
+	JSR DrwShps
+	JSR DrwTrys
 	JSR Fire
 	JMP Play
 Win	JMP Victory
