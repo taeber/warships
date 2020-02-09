@@ -65,6 +65,7 @@ EShips	DFB 0,0,0,5,$B5,5
 	DFB 3,0,0,3,$C4,3
 	DFB 4,0,1,2,$B2,2
 
+lastTry	HEX 0101
 hits	DFB 0,0
 *            1 2 3 4 5 6 7 8 9 10
 tries	HEX A0A0A0A0A0A0A0A0A0A0  A
@@ -685,7 +686,19 @@ Fire3	LDX triedTmp
 	LDA Player
 	EOR #%00000001
 	STA Player
-	RTS
+	BEQ Fire4
+*	STORE lastTry
+	LDX Ships+0    CURSOR.X
+	STX lastTry
+	LDY Ships+1    CURSOR.Y
+	STY lastTry+1
+	JMP Fire5
+*	RESTORE lastTry
+Fire4	LDX lastTry
+	STX Ships+0    CURSOR.X
+	LDY lastTry+1
+	STY Ships+1    CURSOR.Y
+Fire5	RTS
 FireI	HEX 00
 FireCh	HEX 00
 
