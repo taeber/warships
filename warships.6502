@@ -33,7 +33,6 @@ PTR	EQU $06
 SHIPSCNT	EQU 5
 SHIPSIZE	EQU 6
 HITSMAX	EQU 17    5+4+3+3+2
-NAMEMAX	EQU 10
 
 ****************************************
 	JMP Entry
@@ -41,9 +40,6 @@ NAMEMAX	EQU 10
 ScrDirty	HEX 01
 ShipCurr	HEX 01
 Player	HEX 00
-Name     ASC "PLAYER1"
-	HEX 000000    NAMEMAX
-	HEX 00
 
 * type Ship struct (size 9)
 *   { 0:X 1:Y
@@ -64,6 +60,32 @@ EShips	DFB 0,0,0,5,$B5,5
 	DFB 2,0,0,3,$B3,3
 	DFB 3,0,0,3,$C4,3
 	DFB 4,0,1,2,$B2,2
+* 4 POSSIBLE ENEMY STARTING POSITIONS
+* EInitPos [4]pos
+* sizeof(EInitPos[0])== 3*5 = 15
+EInitPos	DFB 5,5,1
+	DFB 7,6,0
+	DFB 1,4,0
+	DFB 7,1,0
+	DFB 5,0,0
+*
+	DFB 2,2,1
+	DFB 5,5,1
+	DFB 6,8,1
+	DFB 7,0,1
+	DFB 1,1,1
+*
+	DFB 2,4,1
+	DFB 2,5,0
+	DFB 6,5,0
+	DFB 9,0,0
+	DFB 9,3,0
+*
+	DFB 0,2,0
+	DFB 2,9,1
+	DFB 9,6,0
+	DFB 3,0,1
+	DFB 9,2,0
 
 lastTry	HEX 0101
 hits	DFB 0,0
@@ -166,19 +188,32 @@ InstrThm	LDA #15
 
 Entry	JSR INIT
 	JSR HOME
+	LDA #15
+	STA CH
 	JSR Print
 	ASC "WARSHIPS"
 	HEX 8D00
 	JSR PressKey
+	LDA #11
+	STA CH
 	JSR Print
 	ASC "A GAME FOR ROONA"
 	HEX 8D8D
-	ASC "Happy birthday, Roona!"
+	ASC "HAPPY BIRTHDAY, "
+	ASC 'ROONA'
+	ASC "!"
 	HEX 8D
-	ASC "Love,"
-	HEX 8D
-	ASC "Uncle Nigel"
+	ASC "LOVE, UNCLE NIGEL"
 	HEX 8D00
+	LDA #22
+	STA CV
+	JSR VTAB
+	JSR Print
+	ASC "COPYRIGHT (C) 2020 "
+	ASC "TAEBER RAPCZAK"
+	HEX 8D
+	ASC "VERSION 0.1.0 2020-02-09"
+	HEX 00
 	JSR PressKey
 Setup	LDA ScrDirty
 	BEQ Setup1
@@ -292,6 +327,7 @@ PrCols1	LDA PrColsD,X
 	INX
 	JMP PrCols1
 PrColsD	ASC " 12345678910"
+*PrColsD	ASC " 0123456789"
 	HEX 00
 PrCols2	NOP
 
@@ -304,6 +340,7 @@ PrRows1	LDA PrRowsD,X
 	INX
 	JMP PrRows1
 PrRowsD	ASC " ABCDEFGHIJ"
+*PrRowsD	ASC " 0123456789"
 	HEX 00
 PrRows2	RTS
 
@@ -313,7 +350,7 @@ PrCursor	LDA Ships      CURSOR.X
 
 Quit	JSR HOME
 	JSR Print
-	ASC "Thank you for playing!"
+	ASC "THANK YOU FOR PLAYING!"
 	HEX 8D00
 	JMP $3D0       RE-ENTER DOS
 
@@ -821,8 +858,32 @@ TryPlay4	LDA TryPlayN
 	HEX 00
 	JSR PressKey
 	RTS
-TryPlay5	JMP Play
+TryPlay5	JMP ESetup
 TryPlayN	HEX 00
+
+* ESetup sets up the enemy starting pos
+ESetup	LDA RNDL
+	AND #%00000011  ONLY 4 CHOICES
+	TAX
+	LDY #15         SIZEOF(POS)
+	JSR ArrItem
+	LDY #0
+ESetup1	LDA EInitPos,X  SHIP.X
+	STA EShips+0,Y
+	INX
+	LDA EInitPos,X  SHIP.Y
+	STA EShips+1,Y
+	INX
+	LDA EInitPos,X  SHIP.HORIZ?
+	STA EShips+2,Y
+	INX
+	TYA
+	CLC
+	ADC #SHIPSIZE
+	TAY
+	CPY #30         SHIPSIZE*5
+	BNE ESetup1
+	JMP Play
 
 Victory	JSR Notify
 	ASC "VICTORY! YOU WON!"
