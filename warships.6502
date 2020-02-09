@@ -151,11 +151,11 @@ InstrYou	LDA #15
 	HEX 8D
 	ASC " ENTER - FIRE"
 	HEX 8D
-	ASC "   A-J - COLUMN"
+	ASC "   A-J - ROW"
 	HEX 8D
-	ASC "   1-9 - ROW"
+	ASC "   1-9 - COLUMN"
 	HEX 8D
-	ASC "     0 - ROW 10"
+	ASC "     0 - COLUMN 10"
 	HEX 8D
 	ASC "   ESC - QUITS"
 	HEX 8D00
