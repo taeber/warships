@@ -25,6 +25,9 @@ FLASHING	EQU %01111111
 INVERSE	EQU %00111111
 
 LINE1	EQU $400    TOP LEFT
+LINE9	EQU $428
+LINESIZE	EQU $80
+
 PTR	EQU $06
 
 SHIPSCNT	EQU 5
@@ -319,7 +322,7 @@ Input	JSR RDKEY2
 	CMP #$9B    ESCAPE
 	BEQ Quit
 	CMP #$A0    SPACE
-	BEQ InputSpc
+	BEQ InputRet
 	CMP #$8D    RETURN/CTRL-M
 	BEQ InputRet
 	CMP #$88    LEFT ARROW
@@ -753,6 +756,60 @@ fireAtH	LDA Ships+1,X   SHIP.Y
 	BCS fireAtHt
 fireAtMs	CLC
 	RTS
+
+* TryPlay will count the number of
+* non-space characters on the grid and
+* call Play if it equals the expected
+* number of characters for all ships.
+TryPlay	LDA #0
+	STA TryPlayN
+	LDA #<LINE1+$81
+	STA PTR
+	LDA #>LINE1
+	STA PTR+1
+	LDY #0
+TryPlay1	LDA (PTR),Y
+	CMP #$A0
+	BEQ TryPlay2
+	INC TryPlayN    NON-SPACE
+TryPlay2 INY
+	CPY #10
+	BCC TryPlay1
+	LDY #0
+	LDA PTR
+	CLC
+	ADC #$80
+	STA PTR
+	BCC TryPlay1
+	INC PTR+1       EX $481->$501
+	LDA PTR+1
+	CMP #$8
+	BEQ TryPlay3
+	CMP #$6
+	BNE TryPlay1
+	LDA PTR
+	CMP #$29        Line13 $628
+	BNE TryPlay1
+	JMP TryPlay4
+* Mem[$481,$780] = Lines[2, 8]
+* Mem[$428,$528] = Lines[9,11]
+* Line12? MUST ALWAYS BE EMPTY
+TryPlay3	LDA #<LINE9+1
+	STA PTR
+	LDA #>LINE9
+	STA PTR+1
+	LDY #0
+	JMP TryPlay1
+TryPlay4	LDA TryPlayN
+	CMP #HITSMAX
+	BEQ TryPlay5
+	JSR Notify
+	ASC "INVALID; SHIPS OVERLAP."
+	HEX 00
+	JSR PressKey
+	RTS
+TryPlay5	JMP Play
+TryPlayN	HEX 00
 
 Victory	JSR Notify
 	ASC "VICTORY! YOU WON!"
