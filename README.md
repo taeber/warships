@@ -30,3 +30,15 @@ Load it using your favorite Apple2 emulator.
 
 It also produces a .WAV file that you can load using the instructions printed
 to the screen after `make all` finishes.
+
+
+## Screenshots
+
+_Intro Screen_
+
+![Intro](warships-intro.png)
+
+
+_Victory Screen_
+
+![Victory](warships-victory.png)
