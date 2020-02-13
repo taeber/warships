@@ -8,7 +8,7 @@ This is the first game I wrote for the Apple //e. It's a Battleship-type game
 for my niece.
 
 I wrote it in 6502 assembly and assembled using
-[https://github.com/taeber/a2asm](a2asm), which I also wrote for this project.
+[a2asm](https://github.com/taeber/a2asm), which I also wrote for this project.
 
 To assemble, simply run:
 
