@@ -14,7 +14,7 @@ build/warships.wav: build/warships.a2 deps/c2t
 
 build/disk.dsk: build/warships.a2 deps/ac.jar deps/disk.dsk
 	cp deps/disk.dsk build/disk.dsk
-	java -jar deps/ac.jar -dos deps/disk.dsk WARSHIPS B <build/warships.a2
+	java -jar deps/ac.jar -dos build/disk.dsk WARSHIPS B <build/warships.a2
 
 deps/ac.jar:
 	mkdir -p deps
